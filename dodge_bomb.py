@@ -20,10 +20,45 @@ def check_bound(rct: pg.Rect) -> tuple[bool, bool]:
     return yoko, tate
 
 
+def gameover(screen: pg.Surface) -> None:
+    # 半透明の黒いオーバーレイに「Game Over」と左右のこうかとん画像を表示する
+    w, h = screen.get_size()
+    overlay = pg.Surface((w, h), pg.SRCALPHA)
+    overlay.fill((0, 0, 0, 180))  # (R,G,B,alpha)
+
+    # フォントとテキスト
+    font = pg.font.Font(None, 80)
+    text_surf = font.render("Game Over", True, (255, 255, 255))
+    text_rect = text_surf.get_rect(center=(w // 2, h // 2))
+    overlay.blit(text_surf, text_rect)
+
+    # 両端のこうかとん画像を読み込んで配置
+    try:
+        kk_img = pg.transform.rotozoom(pg.image.load("fig/8.png"), 0, 0.9)
+    except Exception:
+        kk_img = None
+
+    if kk_img:
+        left_img = kk_img
+        right_img = kk_img
+        lrect = left_img.get_rect()
+        rrect = right_img.get_rect()
+        # テキストの左右に並べる
+        lrect.center = (text_rect.left - lrect.width // 2 - 20, h // 2)
+        rrect.center = (text_rect.right + rrect.width // 2 + 20, h // 2)
+        overlay.blit(left_img, lrect)
+        overlay.blit(right_img, rrect)
+
+    screen.blit(overlay, (0, 0))
+    pg.display.update()
+    pg.time.delay(5000)
+
+
 def main():
     pg.display.set_caption("逃げろ！こうかとん")
     screen = pg.display.set_mode((WIDTH, HEIGHT))
     bg_img = pg.image.load("fig/pg_bg.jpg")
+    font = pg.font.Font(None, 80)
 
     # こうかとんの初期化
     kk_img = pg.transform.rotozoom(pg.image.load("fig/3.png"), 0, 0.9)
@@ -32,8 +67,9 @@ def main():
 
     # 爆弾の初期化
     vx, vy = +5, +5
-    bb_img = pg.Surface((20, 20))
-    pg.draw.circle(bb_img, (255, 0, 0), (10, 10), 10)
+    bom_width, bom_height = 200, 200
+    bb_img = pg.Surface((bom_width, bom_height))
+    pg.draw.circle(bb_img, (255, 0, 0), (bom_width // 2, bom_height // 2), bom_width // 2)
     bb_img.set_colorkey((0, 0, 0))
     bb_rct = bb_img.get_rect()
     bb_rct.center = random.randint(0, WIDTH), random.randint(0, HEIGHT)
@@ -44,9 +80,14 @@ def main():
         for event in pg.event.get():
             if event.type == pg.QUIT:
                 return
+
+            # ゲームオーバー時の処理
             if kk_rct.colliderect(bb_rct):
                 print("ゲームオーバー")
+                gameover(screen)
+                pg.time.delay(2000)
                 return
+
         screen.blit(bg_img, [0, 0])
 
         key_lst = pg.key.get_pressed()
